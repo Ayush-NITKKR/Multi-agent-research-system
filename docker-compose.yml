@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: research_ai_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - research_net
+
+  python-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: research_ai_python
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHON_SERVICE_PORT=8000
+      - PYTHON_SERVICE_HOST=0.0.0.0
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - MISTRAL_MODEL=${MISTRAL_MODEL:-ministral-3b-2512}
+    networks:
+      - research_net
+
+  node-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: research_ai_backend
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/research_ai
+      - JWT_SECRET=${JWT_SECRET:-super_secret_jwt_key_production_2026}
+      - PYTHON_SERVICE_URL=http://python-service:8000
+      - CLIENT_URL=http://localhost:5173
+    depends_on:
+      - mongodb
+      - python-service
+    networks:
+      - research_net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: research_ai_frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - node-backend
+    networks:
+      - research_net
+
+volumes:
+  mongo_data:
+
+networks:
+  research_net:
+    driver: bridge

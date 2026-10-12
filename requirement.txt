@@ -1,0 +1,31 @@
+# LLM and agent framework
+langchain
+langchain-core
+langchain-openai
+langchain-community
+langchain_mistralai
+
+# ReAct agent and tool execution
+langgraph
+
+# Web search
+tavily-python
+
+# HTML parsing and web scraping
+beautifulsoup4
+requests
+lxml
+
+# Environment variables
+python-dotenv
+
+# Data validation and structured outputs
+pydantic
+
+# Frontend/backend API integration (optional)
+fastapi
+uvicorn
+
+# HTTP and asynchronous requests
+httpx
+aiohttp
