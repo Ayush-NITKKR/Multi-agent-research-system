@@ -4,7 +4,11 @@ ResearchAI is an autonomous, full-stack multi-agent deep research platform. It l
 
 ---
 
-## 🏛 Architecture
+## 🏛 Architecture & Workflow Diagram
+
+<p align="center">
+  <img src="flow_daigram.png" alt="ResearchAI Multi-Agent Flow Diagram" width="100%" />
+</p>
 
 ```
 +-------------------------------------------------------------+
