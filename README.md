@@ -233,4 +233,4 @@ If given additional time, the following enhancements would be prioritized:
 4. **Private Network Boundaries**: Development runs locally on `localhost` (`127.0.0.1:8000`, `5001`, `5173`); internal microservice communication is unauthenticated behind the Express gateway.
 
 
-DEMO VIDEO link : https://drive.google.com/file/d/1Q29MJy1BViTALB7mkxNmIyBEXsQfP4ko/view?usp=sharing
+DEMO VIDEO link : [https://drive.google.com/file/d/1Q29MJy1BViTALB7mkxNmIyBEXsQfP4ko/view?usp=sharing](https://drive.google.com/file/d/1VwecQEV89foAl7Cx8zKirUQ127ksrM66/view?usp=sharing)
