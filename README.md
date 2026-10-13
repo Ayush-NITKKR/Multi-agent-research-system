@@ -231,3 +231,6 @@ If given additional time, the following enhancements would be prioritized:
 2. **Quality Gate Threshold**: A minimum score of 8.0 out of 10 and 0 critical issues is the definitive standard for an automated pass; anything below represents insufficient reliability.
 3. **Revision Budgeting**: Capping automated revisions at 2 strikes the ideal balance between output refinement and avoiding infinite generation loops or runaway API token consumption.
 4. **Private Network Boundaries**: Development runs locally on `localhost` (`127.0.0.1:8000`, `5001`, `5173`); internal microservice communication is unauthenticated behind the Express gateway.
+
+
+DEMO VIDEO link : https://drive.google.com/file/d/1Q29MJy1BViTALB7mkxNmIyBEXsQfP4ko/view?usp=sharing
