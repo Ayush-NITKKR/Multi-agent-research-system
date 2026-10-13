@@ -239,6 +239,14 @@ export const retryJob = async (req, res) => {
       });
     }
 
+    const rerunnableStatuses = ["completed", "needs_rerun", "failed"];
+    if (!rerunnableStatuses.includes(job.status)) {
+      return res.status(409).json({
+        success: false,
+        error: "Research job is already in progress and cannot be rerun yet.",
+      });
+    }
+
     // Reset job state
     job.status = "queued";
     job.progress = 5;
@@ -278,9 +286,10 @@ export const getMetrics = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const [total, completed, inProgress, failed] = await Promise.all([
+    const [total, completed, needsRerun, inProgress, failed] = await Promise.all([
       ResearchJob.countDocuments({ userId }),
       ResearchJob.countDocuments({ userId, status: "completed" }),
+      ResearchJob.countDocuments({ userId, status: "needs_rerun" }),
       ResearchJob.countDocuments({
         userId,
         status: { $in: ["queued", "searching", "scraping", "writing", "reviewing", "revising"] },
@@ -293,6 +302,7 @@ export const getMetrics = async (req, res) => {
       metrics: {
         total,
         completed,
+        needsRerun,
         inProgress,
         failed,
       },

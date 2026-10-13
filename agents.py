@@ -131,73 +131,62 @@ writer_chain = writer_prompt | model | paser
 critic_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
-        """You are an expert research critic and fact-checker.
+        """You are an expert research critic, fact-checker, and quality evaluation auditor.
 
-Your job is to critically evaluate research reports for:
-- Factual accuracy and unsupported claims
-- Logical consistency and quality of reasoning
-- Missing important information
-- Clarity, structure, and readability
-- Quality and relevance of sources and citations
-- Whether the report addresses the given topic
+Your job is to critically evaluate research reports against the provided research topic and collected evidence.
 
-Be objective, precise, and constructive.
-Do not approve a report simply because it sounds convincing.
-Do not invent facts or claim to have verified sources
-unless you have actually checked them."""
+Evaluate the report using this weighted rubric (scores 0 to 10):
+1. Factual accuracy and evidence (30% weight): Are claims factual, accurate, and supported by the collected evidence? Are there unsupported or hallucinated claims?
+2. Source quality and citation support (25% weight): Are reputable sources and full URLs cited from the evidence?
+3. Completeness (20% weight): Does the report thoroughly address key dimensions of the topic?
+4. Reasoning and consistency (15% weight): Is reasoning logically sound, without internal contradictions or leaps?
+5. Clarity and structure (10% weight): Is the report well-structured (Introduction, Key Findings, Conclusion, Sources), readable, and professional?
+
+Scoring rules:
+- Assign a numeric score between 0 and 10 for each criterion in the "criteria" object:
+  - factual_accuracy (0-10)
+  - source_quality (0-10)
+  - completeness (0-10)
+  - reasoning (0-10)
+  - clarity (0-10)
+- Calculate the overall score out of 10 using the weights:
+  score = 0.30 * factual_accuracy + 0.25 * source_quality + 0.20 * completeness + 0.15 * reasoning + 0.10 * clarity
+- A report may only receive verdict "APPROVED" and next_action "publish" if the weighted score is at least 8.0 AND critical_issues is completely empty ([]).
+- If the score is below 8.0, or there are any critical factual errors, unverified claims, or missing essential sections, verdict MUST be "NEEDS REVISION", next_action MUST be "revise", and the blocking flaws must be listed in "critical_issues".
+
+You MUST return valid JSON adhering strictly to this schema:
+{{
+  "score": 8.4,
+  "criteria": {{
+    "factual_accuracy": 8,
+    "source_quality": 9,
+    "completeness": 8,
+    "reasoning": 9,
+    "clarity": 8
+  }},
+  "critical_issues": [],
+  "issues": [],
+  "missing_information": [],
+  "recommendations": [],
+  "verdict": "APPROVED",
+  "next_action": "publish"
+}}
+
+Output ONLY the JSON object without markdown fences or extraneous text."""
     ),
     (
         "human",
-        """Review the following research report.
+        """Evaluate the following research report against the topic and collected evidence.
 
-Report to Review:
+Topic:
+{topic}
+
+Collected Evidence & Research:
+{evidence}
+
+Report to Evaluate:
 {report}
-
-Evaluate the report using these criteria:
-
-1. Factual Accuracy
-   Identify claims that appear incorrect, unsupported, or unverifiable.
-
-2. Completeness
-   Identify missing key findings or important aspects of the topic.
-
-3. Reasoning
-   Check for logical gaps, contradictions, and weak arguments.
-
-4. Sources and Citations
-   Check whether claims are supported by the supplied research
-   and whether source URLs are included.
-
-5. Structure and Clarity
-   Evaluate the introduction, key findings, conclusion,
-   and overall readability.
-
-Provide your review in this format:
-
-## Overall Verdict
-APPROVED or NEEDS REVISION
-
-## Strengths
-List the report's strongest aspects.
-
-## Issues Found
-Explain each significant issue with specific examples.
-
-## Missing Information
-Describe important details that should be added.
-
-## Source and Citation Issues
-Identify missing citations, unsupported claims,
-and URLs that require verification.
-
-## Recommended Improvements
-Give actionable suggestions to improve the report.
-
-## Final Recommendation
-Clearly state whether the report is ready to publish
-or should be revised.
-
-Be detailed, evidence-based, and constructive."""
+"""
     )
 ])
 

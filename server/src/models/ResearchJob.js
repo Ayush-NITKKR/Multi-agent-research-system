@@ -12,16 +12,26 @@ const sourceSchema = new mongoose.Schema(
 
 const criticFeedbackSchema = new mongoose.Schema(
   {
+    score: { type: Number, default: 0 },
+    criteria: {
+      factual_accuracy: { type: Number, default: 0 },
+      source_quality: { type: Number, default: 0 },
+      completeness: { type: Number, default: 0 },
+      reasoning: { type: Number, default: 0 },
+      clarity: { type: Number, default: 0 },
+    },
+    critical_issues: [{ type: String }],
+    issues: [{ type: String }],
+    missing_information: [{ type: String }],
+    recommendations: [{ type: String }],
     verdict: {
       type: String,
       enum: ["APPROVED", "NEEDS REVISION", "UNKNOWN"],
       default: "UNKNOWN",
     },
-    raw_feedback: { type: String, default: "" },
+    next_action: { type: String, default: "revise" },
     strengths: [{ type: String }],
-    issues: [{ type: String }],
-    missing_information: [{ type: String }],
-    recommendations: [{ type: String }],
+    raw_feedback: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -30,7 +40,16 @@ const revisionSchema = new mongoose.Schema(
   {
     revision_number: { type: Number, required: true },
     report: { type: String, default: "" },
-    critic_feedback: { type: String, default: "" },
+    score: { type: Number, default: 0 },
+    criteria: {
+      factual_accuracy: { type: Number, default: 0 },
+      source_quality: { type: Number, default: 0 },
+      completeness: { type: Number, default: 0 },
+      reasoning: { type: Number, default: 0 },
+      clarity: { type: Number, default: 0 },
+    },
+    critic_feedback: { type: mongoose.Schema.Types.Mixed, default: "" },
+    critical_issues: [{ type: String }],
     verdict: { type: String, default: "" },
     timestamp: { type: Date, default: Date.now },
   },
@@ -61,11 +80,13 @@ const researchJobSchema = new mongoose.Schema(
         "reviewing",
         "revising",
         "completed",
+        "needs_rerun",
         "failed",
       ],
       default: "queued",
       index: true,
     },
+
     progress: {
       type: Number,
       default: 0,

@@ -49,7 +49,7 @@ export const ResearchExecution = ({ onMenuClick }) => {
 
   // Elapsed timer
   useEffect(() => {
-    if (job?.status === "completed" || job?.status === "failed") return;
+    if (job?.status === "completed" || job?.status === "failed" || job?.status === "needs_rerun") return;
 
     const timer = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
@@ -60,7 +60,7 @@ export const ResearchExecution = ({ onMenuClick }) => {
 
   // Polling for live status
   useEffect(() => {
-    if (!job || job.status === "completed" || job.status === "failed") return;
+    if (!job || job.status === "completed" || job.status === "failed" || job.status === "needs_rerun") return;
 
     const pollInterval = setInterval(async () => {
       try {
@@ -74,9 +74,9 @@ export const ResearchExecution = ({ onMenuClick }) => {
             error: statusRes.error,
           }));
 
-          if (statusRes.status === "completed") {
+          if (statusRes.status === "completed" || statusRes.status === "needs_rerun") {
             clearInterval(pollInterval);
-            // Re-fetch full job data to load sources and report
+            // Re-fetch full job data to load sources, report, and critic feedback
             fetchJob();
           } else if (statusRes.status === "failed") {
             clearInterval(pollInterval);
@@ -140,6 +140,7 @@ export const ResearchExecution = ({ onMenuClick }) => {
   }
 
   const isCompleted = job.status === "completed";
+  const isNeedsRerun = job.status === "needs_rerun";
   const isFailed = job.status === "failed";
 
   return (
@@ -192,14 +193,53 @@ export const ResearchExecution = ({ onMenuClick }) => {
             </div>
 
             {isCompleted && (
-              <button
-                onClick={() => navigate(`/research/${job._id}/report`)}
-                className="btn btn-primary"
-                style={{ padding: "0.5rem 1rem" }}
-              >
-                <FileCheck2 size={16} />
-                <span>View Full Report</span>
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  onClick={() => navigate(`/research/${job._id}/report?tab=research-summary`)}
+                  className="btn btn-secondary"
+                  style={{ padding: "0.5rem 0.85rem", fontSize: "0.8125rem" }}
+                >
+                  <Sparkles size={14} />
+                  <span>Research Summary</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/research/${job._id}/report?tab=execution-summary`)}
+                  className="btn btn-secondary"
+                  style={{ padding: "0.5rem 0.85rem", fontSize: "0.8125rem" }}
+                >
+                  <Clock size={14} />
+                  <span>Execution Summary</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/research/${job._id}/report?tab=report`)}
+                  className="btn btn-primary"
+                  style={{ padding: "0.5rem 0.85rem", fontSize: "0.8125rem" }}
+                >
+                  <FileCheck2 size={14} />
+                  <span>Full Report</span>
+                </button>
+              </div>
+            )}
+
+            {isNeedsRerun && (
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  onClick={() => navigate(`/research/${job._id}/report`)}
+                  className="btn btn-secondary"
+                  style={{ padding: "0.5rem 1rem" }}
+                >
+                  <FileCheck2 size={16} />
+                  <span>Inspect Draft</span>
+                </button>
+                <button
+                  onClick={handleRetry}
+                  className="btn btn-primary"
+                  style={{ padding: "0.5rem 1rem" }}
+                >
+                  <RotateCcw size={16} />
+                  <span>Rerun Research</span>
+                </button>
+              </div>
             )}
 
             {isFailed && (
@@ -214,6 +254,7 @@ export const ResearchExecution = ({ onMenuClick }) => {
             )}
           </div>
         </div>
+
 
         {/* Topic Title Banner */}
         <div
@@ -320,17 +361,103 @@ export const ResearchExecution = ({ onMenuClick }) => {
               Research Complete & Verified
             </h3>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", maxWidth: "500px", margin: "0 auto 1.5rem auto" }}>
-              The research report has been formulated, scrutinized by the fact-checker critic chain,
-              and permanently saved to your workspace.
+              The research report has been formulated, evaluated by the critic chain,
+              and saved to your workspace.
             </p>
-            <button
-              onClick={() => navigate(`/research/${job._id}/report`)}
-              className="btn btn-primary"
-              style={{ padding: "0.75rem 1.75rem", fontSize: "0.9375rem" }}
+            <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => navigate(`/research/${job._id}/report?tab=research-summary`)}
+                className="btn btn-secondary"
+                style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem" }}
+              >
+                <Sparkles size={16} />
+                <span>Research Summary</span>
+              </button>
+              <button
+                onClick={() => navigate(`/research/${job._id}/report?tab=execution-summary`)}
+                className="btn btn-secondary"
+                style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem" }}
+              >
+                <Clock size={16} />
+                <span>Execution Summary</span>
+              </button>
+              <button
+                onClick={() => navigate(`/research/${job._id}/report?tab=report`)}
+                className="btn btn-primary"
+                style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem" }}
+              >
+                <FileCheck2 size={16} />
+                <span>Open Full Dossier</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Needs Rerun Action Box */}
+        {isNeedsRerun && (
+          <div
+            className="card animate-fade-in"
+            style={{
+              marginTop: "2rem",
+              padding: "2rem",
+              textAlign: "center",
+              background: "linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(14, 17, 26, 0.8) 100%)",
+              border: "1px solid rgba(245, 158, 11, 0.35)",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                background: "rgba(245, 158, 11, 0.15)",
+                color: "#fbbf24",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 1rem auto",
+              }}
             >
-              <FileCheck2 size={18} />
-              <span>Open Research Report & Sources</span>
-            </button>
+              <AlertTriangle size={24} />
+            </div>
+            <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#ffffff", marginBottom: "0.5rem" }}>
+              Quality Gate Failed - Needs Rerun
+            </h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", maxWidth: "560px", margin: "0 auto 1.5rem auto" }}>
+              {job.currentStage || "The report did not satisfy the 8.0/10 quality gate after permitted revision attempts."}
+              {job.criticFeedback?.score !== undefined && (
+                <span style={{ display: "block", marginTop: "0.5rem", color: "#fbbf24", fontWeight: 600 }}>
+                  Evaluated Score: {job.criticFeedback.score.toFixed(1)} / 10
+                  {job.criticFeedback.critical_issues?.length > 0 && ` (${job.criticFeedback.critical_issues.length} critical issues remaining)`}
+                </span>
+              )}
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
+              <button
+                onClick={handleRetry}
+                className="btn btn-primary"
+                style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem" }}
+              >
+                <RotateCcw size={16} />
+                <span>Rerun Research</span>
+              </button>
+              <button
+                onClick={() => navigate(`/research/${job._id}/report?tab=execution-summary`)}
+                className="btn btn-secondary"
+                style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem" }}
+              >
+                <Clock size={16} />
+                <span>Audit Execution Summary</span>
+              </button>
+              <button
+                onClick={() => navigate(`/research/${job._id}/report?tab=report`)}
+                className="btn btn-secondary"
+                style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem" }}
+              >
+                <FileCheck2 size={16} />
+                <span>Inspect Report & Feedback</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

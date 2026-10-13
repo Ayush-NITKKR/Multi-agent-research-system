@@ -20,6 +20,8 @@ export const jobRunner = {
     // Execute in next event loop tick
     setImmediate(async () => {
       const startTime = Date.now();
+      let progressTimer = null;
+
       try {
         console.log(`[JobRunner] Starting background execution for job: ${jobId}`);
 
@@ -33,34 +35,34 @@ export const jobRunner = {
         job.status = "searching";
         job.progress = 20;
         job.currentStage = "Searching web sources via Tavily";
+        job.executionMetadata = job.executionMetadata || {};
         job.executionMetadata.started_at = new Date();
         await job.save();
 
-        // Simulate stage progression while Python microservice executes
-        // (Python service coordinates LangChain agents)
-        const progressTimer = setInterval(async () => {
+        // Conservative progress progression while Python microservice executes
+        progressTimer = setInterval(async () => {
           try {
             const current = await ResearchJob.findById(jobId);
-            if (!current || current.status === "completed" || current.status === "failed") {
-              clearInterval(progressTimer);
+            if (!current || ["completed", "needs_rerun", "failed"].includes(current.status)) {
+              if (progressTimer) clearInterval(progressTimer);
               return;
             }
 
             const elapsedSec = (Date.now() - startTime) / 1000;
-            if (elapsedSec > 12 && current.status === "searching") {
+            if (elapsedSec > 15 && current.status === "searching") {
               current.status = "scraping";
-              current.progress = 40;
-              current.currentStage = "Scraping full webpage content via Reader agent";
+              current.progress = 35;
+              current.currentStage = "Processing candidate sources via Reader agent";
               await current.save();
-            } else if (elapsedSec > 25 && current.status === "scraping") {
+            } else if (elapsedSec > 30 && current.status === "scraping") {
               current.status = "writing";
-              current.progress = 65;
-              current.currentStage = "Generating structured research report via Writer chain";
+              current.progress = 55;
+              current.currentStage = "Synthesizing research report via Writer chain";
               await current.save();
-            } else if (elapsedSec > 40 && current.status === "writing") {
+            } else if (elapsedSec > 50 && current.status === "writing") {
               current.status = "reviewing";
-              current.progress = 85;
-              current.currentStage = "Evaluating accuracy and citations via Critic chain";
+              current.progress = 75;
+              current.currentStage = "Evaluating against rubric & citations via Critic chain";
               await current.save();
             }
           } catch (err) {
@@ -72,42 +74,88 @@ export const jobRunner = {
         const result = await pythonService.executeResearch({
           topic: job.topic,
           jobId: job._id.toString(),
-          maxRevisions: 1,
+          maxRevisions: 2,
           enableRevisions: true,
         });
 
-        clearInterval(progressTimer);
-
-        if (result.status === "failed") {
-          throw new Error(result.error || "AI Research Pipeline execution failed");
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
         }
 
-        // Successfully completed
-        job.status = "completed";
-        job.progress = 100;
-        job.currentStage = "Research and evaluation completed";
-        job.report = result.report || "";
-        job.sources = result.sources || [];
-        job.criticFeedback = result.critic_feedback || {
-          verdict: "UNKNOWN",
-          raw_feedback: "",
-          strengths: [],
-          issues: [],
-          missing_information: [],
-          recommendations: [],
+        if (!result || result.status === "failed") {
+          throw new Error(result?.error || "AI Research Pipeline execution failed");
+        }
+
+        // Re-fetch current job before finalizing
+        const freshJob = await ResearchJob.findById(jobId);
+        if (!freshJob) return;
+
+        const critic = result.critic_feedback || {};
+        const criticScore = typeof critic.score === "number" ? critic.score : 0;
+        const criticalIssues = Array.isArray(critic.critical_issues)
+          ? critic.critical_issues
+          : [];
+        const verdict = (critic.verdict || "").toUpperCase();
+        const pyStatus = result.status;
+
+        // Quality Gate: score >= 8.0, no critical issues, APPROVED verdict, Python reports completed
+        const passesQualityGate =
+          pyStatus === "completed" &&
+          criticScore >= 8.0 &&
+          criticalIssues.length === 0 &&
+          verdict === "APPROVED";
+
+        if (passesQualityGate) {
+          freshJob.status = "completed";
+          freshJob.progress = 100;
+          freshJob.currentStage = `Research and evaluation completed (Score: ${criticScore.toFixed(1)}/10)`;
+          freshJob.error = null;
+        } else if (pyStatus === "needs_rerun" || !passesQualityGate) {
+          freshJob.status = "needs_rerun";
+          freshJob.progress = 100;
+          freshJob.currentStage =
+            criticalIssues.length > 0
+              ? `Quality gate failed with ${criticalIssues.length} critical issue(s) (Score: ${criticScore.toFixed(1)}/10)`
+              : `Quality gate failed: score ${criticScore.toFixed(1)}/10 is below 8.0 threshold`;
+          freshJob.error = null;
+        } else {
+          freshJob.status = "needs_rerun";
+          freshJob.progress = 100;
+          freshJob.currentStage = `Quality gate could not verify report approval (status: ${pyStatus})`;
+        }
+
+        freshJob.report = result.report || "";
+        freshJob.sources = result.sources || [];
+        freshJob.criticFeedback = {
+          score: criticScore,
+          criteria: critic.criteria || {
+            factual_accuracy: 0,
+            source_quality: 0,
+            completeness: 0,
+            reasoning: 0,
+            clarity: 0,
+          },
+          critical_issues: criticalIssues,
+          issues: critic.issues || [],
+          missing_information: critic.missing_information || [],
+          recommendations: critic.recommendations || [],
+          verdict: verdict || "NEEDS REVISION",
+          next_action: critic.next_action || (passesQualityGate ? "publish" : "revise"),
+          strengths: critic.strengths || [],
+          raw_feedback: critic.raw_feedback || "",
         };
-        job.revisions = result.revisions || [];
-        job.error = null;
-        job.executionMetadata = {
+        freshJob.revisions = result.revisions || [];
+        freshJob.executionMetadata = {
           duration_ms: result.execution_metadata?.duration_ms || (Date.now() - startTime),
-          revision_count: result.execution_metadata?.revision_count || 0,
+          revision_count: result.execution_metadata?.revision_count || (result.revisions || []).length,
           sources_count: (result.sources || []).length,
-          started_at: job.executionMetadata.started_at,
+          started_at: freshJob.executionMetadata?.started_at || new Date(startTime),
           completed_at: new Date(),
         };
 
-        await job.save();
-        console.log(`[JobRunner] Job ${jobId} completed successfully!`);
+        await freshJob.save();
+        console.log(`[JobRunner] Job ${jobId} finished with status: ${freshJob.status} (Score: ${criticScore})`);
       } catch (error) {
         console.error(`[JobRunner] Job ${jobId} failed: ${error.message}`);
         try {
@@ -122,8 +170,13 @@ export const jobRunner = {
           console.error(`[JobRunner] Failed to record error state for ${jobId}: ${dbErr.message}`);
         }
       } finally {
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
         activeJobs.delete(jobId.toString());
       }
     });
   },
+
 };

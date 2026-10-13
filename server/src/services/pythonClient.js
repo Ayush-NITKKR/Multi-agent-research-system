@@ -20,7 +20,7 @@ export const pythonService = {
     }
   },
 
-  async executeResearch({ topic, jobId, maxRevisions = 1, enableRevisions = true }) {
+  async executeResearch({ topic, jobId, maxRevisions = 2, enableRevisions = true }) {
     try {
       console.log(`[PythonClient] Requesting research for job ${jobId}, topic: "${topic}"`);
       const response = await client.post("/internal/research", {

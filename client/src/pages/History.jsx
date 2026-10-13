@@ -67,10 +67,24 @@ export const History = ({ onMenuClick }) => {
     }
   };
 
+  const handleRetry = async (id, e) => {
+    e.stopPropagation();
+    try {
+      const res = await researchApi.retry(id);
+      if (res.success) {
+        navigate(`/research/${id}`);
+      }
+    } catch (err) {
+      alert("Failed to restart research job.");
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case "completed":
         return <span className="badge badge-completed">Completed</span>;
+      case "needs_rerun":
+        return <span className="badge badge-needs-rerun">Needs Rerun</span>;
       case "failed":
         return <span className="badge badge-failed">Failed</span>;
       case "queued":
@@ -133,6 +147,7 @@ export const History = ({ onMenuClick }) => {
             >
               <option value="all">All Statuses</option>
               <option value="completed">Completed</option>
+              <option value="needs_rerun">Needs Rerun</option>
               <option value="searching">Searching</option>
               <option value="writing">Writing</option>
               <option value="reviewing">Reviewing</option>
@@ -223,8 +238,20 @@ export const History = ({ onMenuClick }) => {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                   {getStatusBadge(job.status)}
+
+                  {(job.status === "failed" || job.status === "needs_rerun") && (
+                    <button
+                      onClick={(e) => handleRetry(job._id, e)}
+                      title="Rerun research pipeline"
+                      className="btn btn-secondary"
+                      style={{ padding: "0.35rem 0.65rem", fontSize: "0.75rem" }}
+                    >
+                      <RotateCcw size={13} />
+                      <span>Rerun</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={(e) => handleDelete(job._id, e)}

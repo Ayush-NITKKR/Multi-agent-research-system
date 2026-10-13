@@ -30,6 +30,7 @@ export const StageStepper = ({ status, currentStage, error, progress = 0 }) => {
       case "writing": return 3;
       case "reviewing": return 4;
       case "revising": return 5;
+      case "needs_rerun": return 5;
       case "completed": return 6;
       case "failed": return -1;
       default: return 0;
@@ -37,6 +38,7 @@ export const StageStepper = ({ status, currentStage, error, progress = 0 }) => {
   };
 
   const currentIndex = getStageIndex(status);
+  const isNeedsRerun = status === "needs_rerun";
 
   return (
     <div
@@ -54,12 +56,39 @@ export const StageStepper = ({ status, currentStage, error, progress = 0 }) => {
             Pipeline Execution Flow
           </h3>
           <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-            Current Activity: <strong style={{ color: status === "failed" ? "var(--color-danger)" : "var(--accent-primary)" }}>{currentStage || status}</strong>
+            Current Activity:{" "}
+            <strong
+              style={{
+                color:
+                  status === "failed"
+                    ? "var(--color-danger)"
+                    : isNeedsRerun
+                    ? "var(--color-warning)"
+                    : status === "completed"
+                    ? "var(--color-success)"
+                    : "var(--accent-primary)",
+              }}
+            >
+              {currentStage || (isNeedsRerun ? "Quality gate failed - Needs rerun" : status)}
+            </strong>
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
-          <span style={{ fontSize: "1.25rem", fontWeight: 800, color: status === "completed" ? "#10b981" : "var(--accent-primary)" }}>
-            {status === "completed" ? 100 : progress}%
+          <span
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              color:
+                status === "completed"
+                  ? "#10b981"
+                  : isNeedsRerun
+                  ? "#fbbf24"
+                  : status === "failed"
+                  ? "#f87171"
+                  : "var(--accent-primary)",
+            }}
+          >
+            {status === "completed" || isNeedsRerun ? 100 : progress}%
           </span>
         </div>
       </div>

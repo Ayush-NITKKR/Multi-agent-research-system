@@ -2,7 +2,7 @@ import React from "react";
 import { Layers, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 export const MetricsCards = ({ metrics = {}, loading = false }) => {
-  const { total = 0, completed = 0, inProgress = 0, failed = 0 } = metrics;
+  const { total = 0, completed = 0, needsRerun = 0, inProgress = 0, failed = 0 } = metrics;
 
   const cards = [
     {
@@ -33,13 +33,13 @@ export const MetricsCards = ({ metrics = {}, loading = false }) => {
       subtext: "Currently executing agents",
     },
     {
-      label: "Failed or Retried",
-      value: failed,
+      label: "Needs Rerun / Failed",
+      value: failed + needsRerun,
       icon: AlertTriangle,
-      color: failed > 0 ? "var(--color-danger)" : "var(--text-muted)",
-      bgColor: failed > 0 ? "var(--color-danger-bg)" : "rgba(255, 255, 255, 0.03)",
-      borderColor: failed > 0 ? "rgba(239, 68, 68, 0.25)" : "var(--border-subtle)",
-      subtext: "Recoverable via one-click retry",
+      color: (failed + needsRerun) > 0 ? "#fbbf24" : "var(--text-muted)",
+      bgColor: (failed + needsRerun) > 0 ? "rgba(245, 158, 11, 0.12)" : "rgba(255, 255, 255, 0.03)",
+      borderColor: (failed + needsRerun) > 0 ? "rgba(245, 158, 11, 0.25)" : "var(--border-subtle)",
+      subtext: needsRerun > 0 ? `${needsRerun} needs rerun, ${failed} failed` : "Recoverable via one-click rerun",
     },
   ];
 
